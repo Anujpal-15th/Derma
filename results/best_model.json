@@ -1,0 +1,7 @@
+{
+  "model": "mlp",
+  "run_id": "d1ba34fa612641bb8c470177d84fe157",
+  "version": 1,
+  "temperature": 1.8006,
+  "uri": "models:/dermamnist-classifier/1"
+}

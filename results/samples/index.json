@@ -1,0 +1,58 @@
+[
+ {
+  "file": "sample_0_0.png",
+  "true": "actinic keratoses"
+ },
+ {
+  "file": "sample_0_1.png",
+  "true": "actinic keratoses"
+ },
+ {
+  "file": "sample_1_0.png",
+  "true": "basal cell carcinoma"
+ },
+ {
+  "file": "sample_1_1.png",
+  "true": "basal cell carcinoma"
+ },
+ {
+  "file": "sample_2_0.png",
+  "true": "benign keratosis-like lesions"
+ },
+ {
+  "file": "sample_2_1.png",
+  "true": "benign keratosis-like lesions"
+ },
+ {
+  "file": "sample_3_0.png",
+  "true": "dermatofibroma"
+ },
+ {
+  "file": "sample_3_1.png",
+  "true": "dermatofibroma"
+ },
+ {
+  "file": "sample_4_0.png",
+  "true": "melanoma"
+ },
+ {
+  "file": "sample_4_1.png",
+  "true": "melanoma"
+ },
+ {
+  "file": "sample_5_0.png",
+  "true": "melanocytic nevi"
+ },
+ {
+  "file": "sample_5_1.png",
+  "true": "melanocytic nevi"
+ },
+ {
+  "file": "sample_6_0.png",
+  "true": "vascular lesions"
+ },
+ {
+  "file": "sample_6_1.png",
+  "true": "vascular lesions"
+ }
+]

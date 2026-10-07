@@ -1,0 +1,7 @@
+seed: 42
+data_url: https://zenodo.org/records/10519652/files/dermamnist.npz
+data_path: data/dermamnist.npz
+mlflow_uri: sqlite:///mlflow.db
+experiment: dermamnist-baselines
+registered_model: dermamnist-classifier
+out_dir: results

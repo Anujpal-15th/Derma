@@ -1,0 +1,5 @@
+{
+  "model_a": "mlp",
+  "model_b": "hist_gb",
+  "mcnemar_exact_p": 0.0
+}

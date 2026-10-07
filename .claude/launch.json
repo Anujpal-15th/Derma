@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": ".venv/Scripts/uvicorn.exe",
+      "runtimeArgs": ["src.api:app", "--port", "8000"],
+      "port": 8000
+    },
+    {
+      "name": "mlflow",
+      "runtimeExecutable": ".venv/Scripts/mlflow.exe",
+      "runtimeArgs": ["ui", "--backend-store-uri", "sqlite:///mlflow.db", "--port", "5000"],
+      "port": 5000
+    }
+  ]
+}

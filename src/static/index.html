@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DermaMNIST Results</title>
+<style>
+:root{--bg:#f7f7f5;--card:#fff;--ink:#1d1d1b;--mute:#6b6b66;--line:#e3e2dd;--ok:#1f7a4d;--bad:#b3261e;--accent:#2f5bd3;--code:#f1f0ec}
+@media (prefers-color-scheme:dark){:root{--bg:#161615;--card:#1f1f1d;--ink:#ecebe6;--mute:#9b9a94;--line:#33332f;--ok:#4cc38a;--bad:#ff8a80;--accent:#8ab0ff;--code:#262624}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 64px}
+h1{margin:0 0 4px;font-size:26px}h2{font-size:18px;margin:32px 0 12px}.sub{color:var(--mute);margin:0 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:12px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.tile .v{font-size:26px;font-weight:650}.tile .k{color:var(--mute);font-size:13px}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}
+th{color:var(--mute);font-weight:600;font-size:13px}tr.best td{font-weight:650}
+img.plot{max-width:100%;border-radius:8px;background:#fff}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.ep{display:flex;gap:10px;align-items:center;flex-wrap:wrap;cursor:pointer}
+.badge{font:600 12px ui-monospace,Consolas,monospace;padding:2px 8px;border-radius:99px;border:1px solid currentColor}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.mono{font-family:ui-monospace,Consolas,monospace;font-size:13px}
+pre{background:var(--code);border-radius:8px;padding:12px;overflow:auto;max-height:340px;margin:10px 0 0;font-size:12.5px}
+button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
+.samples{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.s{text-align:center;font-size:12.5px}.s img{width:100%;max-width:112px;image-rendering:pixelated;border-radius:6px}
+.bar{height:6px;background:var(--accent);border-radius:3px}
+.warn{color:var(--mute);font-size:13px}
+.links{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}
+.links a{color:var(--accent);text-decoration:none;border:1px solid var(--line);background:var(--card);padding:6px 12px;border-radius:99px;font-size:14px}
+.drop{display:block;border:2px dashed var(--line);border-radius:10px;padding:28px 16px;text-align:center;cursor:pointer;color:var(--mute)}
+.drop.over,.drop:hover{border-color:var(--accent);color:var(--ink)}
+.result{display:flex;gap:20px;flex-wrap:wrap;margin-top:16px}
+.result img{width:160px;height:160px;object-fit:cover;border-radius:8px}
+.out{flex:1;min-width:240px}.out .k{color:var(--mute);font-size:13px}.out .v{font-size:22px;font-weight:650;margin-bottom:8px}
+.prow{display:grid;grid-template-columns:200px 1fr 48px;gap:8px;align-items:center;font-size:13px;margin:3px 0}
+.track{background:var(--code);border-radius:3px;height:8px}
+@media (max-width:520px){.prow{grid-template-columns:120px 1fr 40px}}
+</style>
+</head>
+<body><main>
+<h1>DermaMNIST Results</h1>
+<p class="sub">7-class skin-lesion classifier · 2,005 test images · model chosen on validation macro-F1. Research prototype, not a diagnostic device.</p>
+
+<nav class="links">
+  <a href="/docs" target="_blank">API docs (Swagger) ↗</a>
+  <a href="/results/notebook.html" target="_blank">Notebook (full workflow) ↗</a>
+  <a href="http://127.0.0.1:5000" target="_blank">MLflow experiments ↗</a>
+  <a href="/health" target="_blank">/health JSON ↗</a>
+</nav>
+
+<h2>Predict your own image</h2>
+<div class="card">
+  <label class="drop" id="drop">
+    <input type="file" id="file" accept="image/*" hidden>
+    <span>Click to choose a skin-lesion image, or drop one here (JPG/PNG, max 5 MB)</span>
+  </label>
+  <div class="result" id="result" hidden>
+    <img id="preview" alt="Uploaded image">
+    <div class="out">
+      <div class="k">Prediction</div><div class="v" id="plabel"></div>
+      <div id="pbars"></div>
+      <details><summary class="warn">Raw JSON response</summary><pre id="pjson"></pre></details>
+    </div>
+  </div>
+  <p class="warn">The image is resized to 28×28 to match the training data, so ordinary phone photos are far outside what the model learned. Research prototype only.</p>
+</div>
+
+<div class="tiles" id="tiles"></div>
+
+<h2>Model comparison (test set)</h2>
+<div class="card scroll"><table id="metrics"><tr><td>Loading…</td></tr></table></div>
+<p class="warn">Macro-F1 is the headline: the always-majority baseline gets ~67% accuracy but 0.11 macro-F1. ECE is calibration error (lower is better), shown before and after temperature scaling.</p>
+
+<div class="grid2">
+  <div class="card"><img class="plot" src="/results/model_comparison.png" alt="Bar chart of test metrics by model"></div>
+  <div class="card"><img class="plot" id="cm" alt="Confusion matrix of the registered model"></div>
+</div>
+
+<h2>Live predictions (2 held-out test images per class → POST /predict/image) <span class="warn" id="samplescore"></span></h2>
+<div class="card"><div class="samples" id="samples">Loading…</div></div>
+
+<h2>Endpoints and JSON responses <button id="rerun">Re-run checks</button></h2>
+<div id="eps"></div>
+
+<h2>Recorded URL audit</h2>
+<div class="card scroll" id="audit"><span class="warn">No results/url_audit.json yet.</span></div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const fmt = v => isNaN(+v) || v === '' ? esc(v) : (+v).toFixed(3);
+
+async function loadMetrics(){
+  const txt = await (await fetch('/results/model_comparison.csv')).text();
+  const [head, ...rows] = txt.trim().split(/\r?\n/).map(l => l.split(','));
+  const r = rows.map(c => Object.fromEntries(head.map((h,i)=>[h,c[i]])));
+  const cols = [['model','Model'],['test_macro_f1','Macro-F1'],['ci','95% CI'],['test_balanced_acc','Bal. acc'],
+    ['test_accuracy','Accuracy'],['test_roc_auc_ovr','ROC-AUC'],['test_ece','ECE raw'],['test_ece_temp_scaled','ECE scaled'],['fit_seconds','Fit (s)']];
+  $('#metrics').innerHTML = '<tr>'+cols.map(c=>`<th>${c[1]}</th>`).join('')+'</tr>' + r.map((x,i)=>{
+    x.ci = x.test_macro_f1_ci_low ? `${(+x.test_macro_f1_ci_low).toFixed(3)} – ${(+x.test_macro_f1_ci_high).toFixed(3)}` : '';
+    return `<tr class="${i?'':'best'}">`+cols.map(([k])=>`<td>${k==='ci'||k==='model'?esc(x[k])+(k==='model'&&!i?' ★':''):fmt(x[k])}</td>`).join('')+'</tr>'}).join('');
+  const b = r[0];
+  $('#cm').src = `/results/confusion_${b.model}.png`;
+  $('#tiles').innerHTML = [['Registered model', b.model.toUpperCase()],['Test macro-F1', fmt(b.test_macro_f1)],
+    ['Test ROC-AUC', fmt(b.test_roc_auc_ovr)],['ECE after scaling', fmt(b.test_ece_temp_scaled)]]
+    .map(([k,v])=>`<div class="card tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+}
+
+async function loadSamples(){
+  const list = await (await fetch('/results/samples/index.json')).json();
+  $('#samples').innerHTML = ''; let hits = 0;
+  for (const s of list){
+    const blob = await (await fetch('/results/samples/'+s.file)).blob();
+    const fd = new FormData(); fd.append('file', blob, s.file);
+    const res = await fetch('/predict/image', {method:'POST', body:fd}); const j = await res.json();
+    const p = j.probabilities ? j.probabilities[j.label] : 0, hit = j.label === s.true; hits += hit;
+    $('#samplescore').textContent = `${hits} / ${list.indexOf(s) + 1} correct · model: ${j.model}`;
+    $('#samples').insertAdjacentHTML('beforeend', `<div class="s"><img src="/results/samples/${s.file}" alt="${esc(s.true)}">
+      <div><b>True:</b> ${esc(s.true)}</div><div class="${hit?'ok':'bad'}"><b>Pred:</b> ${esc(j.label||j.detail)} ${hit?'✓':'✗'}</div>
+      <div class="bar" style="width:${Math.round(p*100)}%"></div><div class="warn">${(p*100).toFixed(0)}% confidence</div></div>`);
+  }
+}
+
+async function pngBlob(){ return (await fetch('/results/samples/sample_0_0.png')).blob(); }
+const checks = [
+  ['GET /health', () => fetch('/health'), 200],
+  ['GET /openapi.json (paths)', () => fetch('/openapi.json'), 200, j => Object.keys(j.paths)],
+  ['GET /docs', () => fetch('/docs'), 200, null, true],
+  ['POST /predict (valid 28×28×3)', async () => fetch('/predict',{method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({pixels:Array.from({length:28},()=>Array.from({length:28},()=>[200,150,140]))})}), 200],
+  ['POST /predict (wrong shape)', () => fetch('/predict',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"pixels":[[[1,2,3]]]}'}), 422],
+  ['POST /predict (ragged)', () => fetch('/predict',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"pixels":[[[1,2,3]],[[1]]]}'}), 422],
+  ['POST /predict (pixel > 255)', () => fetch('/predict',{method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({pixels:Array.from({length:28},()=>Array.from({length:28},()=>[300,0,0]))})}), 422],
+  ['POST /predict/image (PNG)', async () => {const fd=new FormData(); fd.append('file', await pngBlob(), 'x.png'); return fetch('/predict/image',{method:'POST',body:fd})}, 200],
+  ['POST /predict/image (junk bytes)', () => {const fd=new FormData(); fd.append('file', new Blob(['junk']), 'x.png'); return fetch('/predict/image',{method:'POST',body:fd})}, 400],
+  ['GET /results/best_model.json', () => fetch('/results/best_model.json'), 200],
+  ['GET /results/significance.json', () => fetch('/results/significance.json'), 200],
+];
+
+async function runChecks(){
+  $('#eps').innerHTML = '';
+  for (const [name, call, want, pick, htmlOnly] of checks){
+    let status = 'ERR', body = '';
+    try { const r = await call(); status = r.status;
+      if (htmlOnly) body = '(HTML page — open /docs)';
+      else { const t = await r.text(); try { let j = JSON.parse(t); if (pick) j = pick(j); body = JSON.stringify(j, null, 2); } catch { body = t.slice(0,400); } }
+    } catch(e){ body = String(e); }
+    const pass = status === want;
+    $('#eps').insertAdjacentHTML('beforeend', `<details class="card" ${pass?'':'open'}><summary class="ep">
+      <span class="badge ${pass?'ok':'bad'}">${status}</span><span class="mono">${esc(name)}</span>
+      <span class="warn">expected ${want} · ${pass?'pass':'FAIL'}</span></summary><pre>${esc(body)}</pre></details>`);
+  }
+}
+
+async function loadAudit(){
+  const r = await fetch('/results/url_audit.json'); if (!r.ok) return;
+  const a = await r.json();
+  $('#audit').innerHTML = '<table><tr><th>Name</th><th>Method</th><th>URL</th><th>Status</th></tr>' + a.map((x,i)=>
+    `<tr><td>${esc(x.name)}</td><td>${esc(x.method)}</td><td class="mono">${esc(x.url)}</td><td>${esc(x.status)}</td></tr>
+     <tr><td colspan="4" style="text-align:left"><details><summary class="warn">response</summary><pre>${esc(JSON.stringify(x.response,null,2))}</pre></details></td></tr>`).join('') + '</table>';
+}
+
+async function predictFile(f){
+  if (!f) return;
+  $('#result').hidden = false; $('#preview').src = URL.createObjectURL(f);
+  $('#plabel').textContent = 'Predicting…'; $('#pbars').innerHTML = ''; $('#pjson').textContent = '';
+  const fd = new FormData(); fd.append('file', f, f.name);
+  try {
+    const r = await fetch('/predict/image', {method:'POST', body:fd}); const j = await r.json();
+    $('#pjson').textContent = JSON.stringify(j, null, 2);
+    if (!r.ok){ $('#plabel').innerHTML = `<span class="bad">Error ${r.status}: ${esc(j.detail)}</span>`; return; }
+    $('#plabel').textContent = `${j.label} (${(j.probabilities[j.label]*100).toFixed(0)}%)`;
+    $('#pbars').innerHTML = Object.entries(j.probabilities).sort((a,b)=>b[1]-a[1]).map(([c,p]) =>
+      `<div class="prow"><span>${esc(c)}</span><div class="track"><div class="bar" style="width:${(p*100).toFixed(1)}%"></div></div><span>${(p*100).toFixed(1)}%</span></div>`).join('');
+  } catch(e){ $('#plabel').innerHTML = `<span class="bad">${esc(e)}</span>`; }
+}
+$('#file').onchange = e => predictFile(e.target.files[0]);
+const drop = $('#drop');
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); predictFile(e.dataTransfer.files[0]); };
+
+$('#rerun').onclick = runChecks;
+loadMetrics(); loadSamples(); runChecks(); loadAudit();
+</script>
+</body></html>
