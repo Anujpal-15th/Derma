@@ -32,8 +32,8 @@ async def lifespan(app):
         info = json.loads(info_path.read_text())
         uri = os.getenv("MODEL_URI", info["uri"])
         if info.get("flavor") == "pytorch":
-            import mlflow.pytorch
-            state["model"] = mlflow.pytorch.load_model(uri, map_location="cpu").eval()
+            from src.cnn import build_model  # plain state_dict: loads without MLflow's pt2 export
+            state["model"] = build_model(ROOT / info["weights"])
         else:
             state["model"] = mlflow.sklearn.load_model(uri)
         state["info"] = info

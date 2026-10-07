@@ -37,6 +37,15 @@ def to_tensor(images):
     return (x - MEAN) / STD
 
 
+def build_model(weights_path=None):
+    """ResNet-18 with a 7-class head; loads fine-tuned weights if a path is given."""
+    model = resnet18(weights=None if weights_path else ResNet18_Weights.IMAGENET1K_V1)
+    model.fc = nn.Linear(model.fc.in_features, len(CLASSES))
+    if weights_path:
+        model.load_state_dict(torch.load(weights_path, map_location="cpu", weights_only=True))
+    return model.eval()
+
+
 @torch.no_grad()
 def predict_proba(model, images, bs=256):
     model.eval()
@@ -60,8 +69,7 @@ def main(epochs=8):
     data = load_128(cfg)
     (Xtr, ytr), (Xva, yva), (Xte, yte) = data["train"], data["val"], data["test"]
 
-    model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
-    model.fc = nn.Linear(model.fc.in_features, len(CLASSES))
+    model = build_model()
     # sqrt-inverse-frequency class weights: helps minority recall without wrecking majority precision
     counts = np.bincount(ytr, minlength=len(CLASSES))
     w = torch.tensor((counts.max() / counts) ** 0.5, dtype=torch.float32)
@@ -93,6 +101,8 @@ def main(epochs=8):
                 best_f1, best_state = m["macro_f1"], {k: v.clone() for k, v in model.state_dict().items()}
 
         model.load_state_dict(best_state)
+        (ROOT / "models").mkdir(exist_ok=True)
+        torch.save(best_state, ROOT / "models" / "resnet18_dermamnist.pt")  # save weights before anything can fail
         t = fit_temperature(yva, predict_proba(model, Xva))
         p_test = predict_proba(model, Xte)
         m = metrics(yte, p_test)
@@ -101,7 +111,7 @@ def main(epochs=8):
                  "test_ece_temp_scaled": ece(yte, apply_temperature(p_test, t)),
                  "test_macro_f1_ci_low": lo, "test_macro_f1_ci_high": hi}
         mlflow.log_metrics(final)
-        mlflow.pytorch.log_model(model, name="model")
+        mlflow.pytorch.log_model(model, name="model", input_example=to_tensor(Xva[:1]).numpy())
         print(json.dumps({k: round(v, 4) for k, v in final.items()}, indent=1))
         print(confusion_matrix(yte, p_test.argmax(1)))
         mv = mlflow.register_model(f"runs:/{run.info.run_id}/model", cfg["registered_model"])
@@ -110,7 +120,7 @@ def main(epochs=8):
     np.save(out / "cnn_test_proba.npy", p_test)
     (out / "cnn_metrics.json").write_text(json.dumps({k: round(float(v), 4) for k, v in final.items()}, indent=2))
     (out / "best_model.json").write_text(json.dumps(
-        {"model": "resnet18_96px", "flavor": "pytorch", "run_id": run.info.run_id, "version": mv.version,
+        {"model": "resnet18_96px", "flavor": "pytorch", "weights": "models/resnet18_dermamnist.pt", "run_id": run.info.run_id, "version": mv.version,
          "temperature": t, "uri": f"models:/{cfg['registered_model']}/{mv.version}"}, indent=2))
     print(f"registered v{mv.version}")
     update_comparison(cfg)

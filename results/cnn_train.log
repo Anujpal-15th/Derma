@@ -1,1 +1,3 @@
-epoch 1/6 loss=1.567 val_macroF1=0.413 val_acc=0.721 (410s)
+epoch 1/6 loss=1.567 val_macroF1=0.413 val_acc=0.721 (194s)
+epoch 2/6 loss=1.295 val_macroF1=0.631 val_acc=0.779 (221s)
+epoch 3/6 loss=1.173 val_macroF1=0.499 val_acc=0.691 (198s)

@@ -97,6 +97,13 @@ The MLP and HistGB are tied on macro-F1 (overlapping CIs). The API serves temper
 
 See `docs/final_report.md` for the discussion, limitations and next steps.
 
+### CNN (ResNet-18, in progress)
+`src/cnn.py` fine-tunes an ImageNet-pretrained ResNet-18 on DermaMNIST-128 images (trained at 96 px on CPU, 6 epochs, ~25–40 min). One full run, logged in MLflow, reached **test macro-F1 0.735 [95% CI 0.696–0.765]**, balanced accuracy 0.774, accuracy 0.830 and ROC-AUC 0.966. That is far above the MLP, but the run crashed while saving, so its weights were lost. The saving bug is fixed. To train the CNN and switch the API to it:
+```bash
+python -m src.cnn 6
+```
+This writes `models/resnet18_dermamnist.pt` and updates `results/best_model.json`. The API then serves the CNN automatically on restart. Until then, the API serves the MLP.
+
 ## Next steps
 1. Add a CNN (ResNet18/EfficientNet-B0) on 224 px HAM10000 with a lesion-grouped split.
 2. Oversample minority classes for the MLP so every model is class-balanced.
